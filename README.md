@@ -75,10 +75,6 @@ the SiliconFlow models page. Preset metadata (sizes, defaults, capabilities)
 lives in [`src/models.js`](src/models.js) and
 [`src/videoModels.js`](src/videoModels.js).
 
-## Roadmap
-
-- [ ] Prompt history / re-run
-- [ ] Deployable build with a small Bun proxy (for non-dev hosting)
 
 ## License
 
