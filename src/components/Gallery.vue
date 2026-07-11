@@ -3,9 +3,18 @@ defineProps({
   items: { type: Array, required: true },
   loading: Boolean,
   batchSize: { type: Number, default: 1 },
+  pendingSize: { type: String, default: '' },
   statusText: { type: String, default: '' },
   mediaLabel: { type: String, default: 'images' },
 })
+
+// Turn a "WIDTHxHEIGHT" size string into a CSS aspect-ratio ("1024 / 768").
+// Falls back to square when the size is missing or unparseable, so older
+// results (which didn't record a size) still render sensibly.
+function aspect(size) {
+  const m = /^(\d+)\s*x\s*(\d+)$/i.exec(String(size || '').trim())
+  return m ? `${m[1]} / ${m[2]}` : '1 / 1'
+}
 
 function download(url, index, type) {
   // SiliconFlow serves media from its own CDN so a plain anchor download works.
@@ -24,8 +33,13 @@ function download(url, index, type) {
 <template>
   <div class="gallery">
     <div v-if="loading">
-      <div class="grid">
-        <div v-for="n in batchSize" :key="n" class="skeleton" />
+      <div class="grid" :class="{ single: batchSize === 1 }">
+        <div
+          v-for="n in batchSize"
+          :key="n"
+          class="skeleton"
+          :style="{ aspectRatio: aspect(pendingSize) }"
+        />
       </div>
       <p v-if="statusText" class="status">{{ statusText }}</p>
     </div>
@@ -45,8 +59,19 @@ function download(url, index, type) {
             <template v-if="batch.seed != null"> · seed {{ batch.seed }}</template>
           </span>
         </header>
-        <div class="grid" :class="{ 'grid-video': batch.type === 'video' }">
-          <figure v-for="(item, ii) in batch.images" :key="ii" class="card" :class="{ video: batch.type === 'video' }">
+        <div
+          class="grid"
+          :class="{
+            'grid-video': batch.type === 'video',
+            single: batch.type !== 'video' && batch.images.length === 1,
+          }"
+        >
+          <figure
+            v-for="(item, ii) in batch.images"
+            :key="ii"
+            class="card"
+            :class="{ video: batch.type === 'video' }"
+          >
             <video
               v-if="batch.type === 'video'"
               :src="item.url"
@@ -69,10 +94,24 @@ function download(url, index, type) {
   height: 100%;
 }
 
+/* Tallest an image may get, leaving room for page padding + the batch header
+   so a single result fits the content area without scrolling. */
+.gallery {
+  --media-max-h: calc(100vh - 140px);
+}
+
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 14px;
+  justify-items: center;
+}
+
+/* A lone image isn't crammed into a 220px column — it grows to fill the
+   available space (bounded by height) and centers, at its true ratio. */
+.grid.single {
+  display: flex;
+  justify-content: center;
 }
 
 .stack {
@@ -111,14 +150,31 @@ function download(url, index, type) {
   overflow: hidden;
   background: var(--bg-input);
   border: 1px solid var(--border);
-  aspect-ratio: 1;
+  max-width: 100%;
 }
 
+/* In the grid, cards fill their column; the image keeps its own ratio. */
 .card img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
   display: block;
+  width: 100%;
+  height: auto;
+  max-height: var(--media-max-h);
+  object-fit: contain;
+}
+
+/* The single-image case: size by height so a portrait fills vertically and a
+   landscape fills horizontally — always the rendered aspect ratio. */
+.grid.single .card img {
+  width: auto;
+  max-width: 100%;
+  max-height: var(--media-max-h);
+}
+
+/* Loading skeleton mirrors the single-image sizing: height-driven, centered. */
+.grid.single .skeleton {
+  width: auto;
+  height: var(--media-max-h);
+  max-width: 100%;
 }
 
 /* Videos keep their real aspect ratio instead of being square-cropped. */
@@ -169,6 +225,8 @@ function download(url, index, type) {
 
 .skeleton {
   aspect-ratio: 1;
+  width: 100%;
+  max-height: var(--media-max-h);
   border-radius: var(--radius);
   background: linear-gradient(100deg, var(--bg-input) 30%, var(--bg-elev) 50%, var(--bg-input) 70%);
   background-size: 200% 100%;

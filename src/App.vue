@@ -1,21 +1,21 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { generateImages, generateVideo } from './api/siliconflow.js'
+import { generateImages, generateVideo } from './api/provider.js'
 import { MODELS, findModel, COMMON_SIZES } from './models.js'
 import { VIDEO_MODELS, findVideoModel, VIDEO_SIZES } from './videoModels.js'
 import Gallery from './components/Gallery.vue'
 
-const LS_KEY = 'siliconflow-key'
+const LS_KEY = 'api-key'
 const LS_SETTINGS = 'imagegen-settings'
 
 // 'image' (synchronous) or 'video' (async submit + poll).
 const mode = ref('image')
 const isVideo = computed(() => mode.value === 'video')
 
-// Optional: seed the key from a .env file (VITE_SILICONFLOW_API_KEY).
+// Optional: seed the key from a .env file (VITE_API_KEY).
 // Handy for local dev so you don't paste it every time. A key you type in the
 // UI is saved to localStorage and takes precedence on later visits.
-const ENV_KEY = import.meta.env.VITE_SILICONFLOW_API_KEY || ''
+const ENV_KEY = import.meta.env.VITE_API_KEY || ''
 
 // --- persisted state ---
 const apiKey = ref('')
@@ -24,7 +24,7 @@ const keyFromEnv = ref(false)
 
 const modelId = ref(MODELS[0].id)
 const useCustomModel = ref(false)
-const customModelId = ref('') // any model id copied from the SiliconFlow site
+const customModelId = ref('') // any model id from your provider
 const prompt = ref('')
 const negativePrompt = ref('')
 const imageSize = ref(MODELS[0].sizes[0])
@@ -197,7 +197,7 @@ function onImagePick(e) {
 async function generate() {
   error.value = ''
   if (!canGenerate.value) {
-    if (!apiKey.value) error.value = 'Add your SiliconFlow API key first.'
+    if (!apiKey.value) error.value = 'Add your provider API key first.'
     else if (!prompt.value.trim()) error.value = 'Enter a prompt.'
     else if (!effectiveModelId.value) error.value = 'Enter a model id.'
     else if (needsSourceImage.value && !sourceImage.value)
@@ -261,6 +261,7 @@ async function generate() {
         prompt: prompt.value.trim(),
         model: effectiveModelId.value,
         seed: data.seed ?? seedOpt ?? null,
+        imageSize: effectiveSize.value,
         images,
       })
     }
@@ -289,7 +290,7 @@ function handlePromptKeydown(e) {
     <aside class="sidebar">
       <div class="brand">
         <h1>AI {{ isVideo ? 'Video' : 'Image' }} Gen</h1>
-        <span class="tag">SiliconFlow harness</span>
+        <span class="tag">any-provider harness</span>
       </div>
 
       <div class="modes">
@@ -312,8 +313,8 @@ function handlePromptKeydown(e) {
           </button>
         </div>
         <p class="hint">
-          Stored only in your browser (localStorage). Get one at
-          <a href="https://cloud.siliconflow.com" target="_blank" rel="noopener">siliconflow.com</a>.
+          Stored only in your browser (localStorage). Set VITE_PROVIDER_URL in
+          .env to point this at your provider's API.
         </p>
       </div>
 
@@ -333,7 +334,7 @@ function handlePromptKeydown(e) {
             :placeholder="isVideo ? 'e.g. Wan-AI/Wan2.2-T2V-A14B' : 'e.g. black-forest-labs/FLUX.1-dev'"
             spellcheck="false"
           />
-          <p class="hint">Paste any {{ isVideo ? 'video' : 'image' }} model id from the SiliconFlow models page.</p>
+          <p class="hint">Paste any {{ isVideo ? 'video' : 'image' }} model id your provider supports.</p>
         </template>
       </div>
 
@@ -415,6 +416,7 @@ function handlePromptKeydown(e) {
         :items="results"
         :loading="loading"
         :batch-size="isVideo ? 1 : Number(batchSize)"
+        :pending-size="isVideo ? '' : effectiveSize"
         :status-text="statusText"
         :media-label="isVideo ? 'videos' : 'images'"
       />
