@@ -2,17 +2,24 @@
 
 A tiny, local, open-source front end for generating images and videos with the
 [SiliconFlow](https://siliconflow.com) API. Bring your own API key, pick a model,
-type a prompt. No accounts, no backend, no telemetry — it runs entirely on your
+type a prompt. No accounts, no backend, no telemetry, it runs entirely on your
 machine and your key never leaves the browser.
 
 > Just want to make a few one-off generations? SiliconFlow's own web playground
-> is simpler. This exists for folks who want a **local, no-login, forkable** UI —
+> is simpler. This exists for folks who want a **local, no-login, forkable** UI
 > a small single-purpose harness you can point at your own key or adapt to
 > another provider.
 
 Built with Vue 3 + Vite, run with [Bun](https://bun.sh).
 
 ## Quick start
+create a .env file and copy the .env.example to .env and set your key:
+
+```bash
+cp .env.example .env
+```
+
+Install dependencies and run the dev server:
 
 ```bash
 bun install
