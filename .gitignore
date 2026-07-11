@@ -1,0 +1,10 @@
+node_modules
+dist
+plan.md
+.claude
+.env
+.env.*
+!.env.example
+*.local
+.DS_Store
+.vscode
